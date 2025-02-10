@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Hex Message Decoder</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: #333;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 40px auto;
+            padding: 30px;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+            position: relative;
+            overflow: hidden;
+        }
+
+        h1 {
+            text-align: center;
+            color: #1e3c72;
+            font-size: 2.5em;
+            margin-bottom: 30px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .input-section {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        #hexInput {
+            flex: 1;
+            padding: 15px;
+            font-size: 1.2em;
+            font-family: 'Courier New', monospace;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            transition: border-color 0.3s ease;
+        }
+
+        #hexInput:focus {
+            outline: none;
+            border-color: #1e3c72;
+        }
+
+        button {
+            padding: 15px 30px;
+            font-size: 1.2em;
+            background: #1e3c72;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        button:hover {
+            background: #2a5298;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        #output {
+            white-space: pre-wrap;
+            font-family: 'Courier New', monospace;
+            font-size: 1.1em;
+            line-height: 1.6;
+            background-color: #f8f9fa;
+            padding: 25px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+        }
+
+        /* Styling untuk hasil decode */
+        .key-value {
+            margin-bottom: 15px;
+            padding: 15px;
+            background: #fff;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            font-family: 'Courier New', monospace;
+        }
+
+        .key-value strong {
+            color: #1e3c72;
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .key-value pre {
+            margin: 0;
+            white-space: pre;
+            font-family: 'Courier New', monospace;
+            padding-left: 20px;
+        }
+
+        .beacon-info {
+            padding-left: 20px;
+            line-height: 1.5;
+        }
+
+        /* Responsive design */
+        @media (max-width: 768px) {
+            .container {
+                margin: 20px;
+                padding: 20px;
+            }
+
+            .input-section {
+                flex-direction: column;
+            }
+
+            button {
+                width: 100%;
+            }
+
+            h1 {
+                font-size: 2em;
+            }
+        }
+
+        #map {
+            height: 400px;
+            width: 100%;
+            margin-top: 20px;
+            border-radius: 8px;
+            display: none;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            position: relative;
+            z-index: 1;
+        }
+
+        .coordinates-section {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            display: none;
+            transition: all 0.3s ease;
+            border: 1px solid #ddd;
+        }
+
+        .map-loading {
+            position: relative;
+        }
+
+        .map-loading::after {
+            content: "Loading map...";
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255,255,255,0.9);
+            padding: 10px 20px;
+            border-radius: 4px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        /* Optimize map rendering */
+        .leaflet-fade-anim .leaflet-tile,.leaflet-zoom-anim .leaflet-zoom-animated {
+            will-change: transform;
+        }
+        
+        .leaflet-container {
+            background: #f8f9fa;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        /* Fix popup positioning */
+        .leaflet-popup {
+            position: absolute;
+            z-index: 2;
+        }
+
+        /* Fix controls positioning */
+        .leaflet-control-container {
+            position: absolute;
+            z-index: 2;
+        }
+
+        /* Fix map overlay elements */
+        .leaflet-pane {
+            z-index: 1;
+        }
+
+        /* Ensure map controls stay above other elements */
+        .leaflet-top,
+        .leaflet-bottom {
+            z-index: 3;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Decoder Lansitec Cat 1</h1>
+        <div class="input-section">
+            <input type="text" id="hexInput" placeholder="Enter hex message (e.g., 10F3000000000078...)">
+            <button onclick="decodeMessage()">Decode</button>
+        </div>
+        <div id="output"></div>
+        <div class="coordinates-section" id="coordinates"></div>
+        <div id="map"></div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        let map;
+        let marker;
+        let mapInitialized = false;
+
+        function initMap() {
+            if (mapInitialized) return;
+            
+            map = L.map('map', {
+                zoomControl: true,
+                scrollWheelZoom: true,
+                dragging: true,
+                maxZoom: 18,
+                minZoom: 2
+            }).setView([0, 0], 2);
+
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors',
+                tileSize: 256,
+                zoomOffset: 0,
+                maxNativeZoom: 19,
+                maxZoom: 18
+            }).addTo(map);
+
+            mapInitialized = true;
+        }
+
+        function showLocation(lat, lng) {
+            return new Promise((resolve) => {
+                const mapDiv = document.getElementById('map');
+                const coordDiv = document.getElementById('coordinates');
+                
+                // Show loading state
+                mapDiv.classList.add('map-loading');
+                mapDiv.style.display = 'block';
+                coordDiv.style.display = 'block';
+                
+                // Initialize map if needed
+                if (!mapInitialized) {
+                    initMap();
+                }
+
+                // Update coordinates text
+                coordDiv.innerHTML = `
+                    <strong>Location:</strong><br>
+                    Latitude: ${lat.toFixed(6)}°<br>
+                    Longitude: ${lng.toFixed(6)}°
+                `;
+
+                // Remove existing marker
+                if (marker) {
+                    map.removeLayer(marker);
+                }
+
+                // Add new marker with popup
+                marker = L.marker([lat, lng])
+                    .bindPopup(`<b>Position</b><br>Lat: ${lat.toFixed(6)}<br>Lng: ${lng.toFixed(6)}`)
+                    .addTo(map);
+
+                // Center map with animation
+                map.setView([lat, lng], 13, {
+                    animate: true,
+                    duration: 1
+                });
+
+                // Remove loading state after map is ready
+                map.once('moveend', () => {
+                    mapDiv.classList.remove('map-loading');
+                    marker.openPopup();
+                    resolve();
+                });
+
+                // Trigger a resize to ensure proper rendering
+                setTimeout(() => {
+                    map.invalidateSize();
+                }, 100);
+            });
+        }
+
+        async function decodeMessage() {
+            const hexInput = document.getElementById('hexInput').value.trim();
+            const output = document.getElementById('output');
+            const mapDiv = document.getElementById('map');
+            const coordDiv = document.getElementById('coordinates');
+            
+            if (!hexInput) {
+                output.innerHTML = '<div class="key-value" style="color: #dc3545;">Please enter a hex message</div>';
+                return;
+            }
+
+            output.innerHTML = '<div class="key-value" style="color: #1e3c72;">Decoding...</div>';
+            
+            try {
+                const response = await fetch('/decode', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ hexMessage: hexInput })
+                });
+                
+                const decodedMessage = await response.json();
+                
+                if (response.ok) {
+                    let outputText = '';
+                    let lat, lng;
+
+                    for (const [key, value] of Object.entries(decodedMessage)) {
+                        outputText += `<div class="key-value">`;
+                        outputText += `<strong>${key}:</strong>`;
+                        outputText += `<pre>Value: ${value.Value}</pre>`;
+                        
+                        if (value.Status) {
+                            outputText += `<pre>Status:</pre>`;
+                            for (const [statusKey, statusValue] of Object.entries(value.Status)) {
+                                outputText += `<pre>    ${statusKey}: ${statusValue}</pre>`;
+                            }
+                        } else if (value.Description) {
+                            if (key.startsWith('Beacon')) {
+                                // Special formatting for Beacon descriptions
+                                const lines = value.Description.split('\n');
+                                outputText += `<div class="beacon-info">`;
+                                lines.forEach(line => {
+                                    outputText += `<pre>${line}</pre>`;
+                                });
+                                outputText += `</div>`;
+                            } else {
+                                outputText += `<pre>Description: ${value.Description}</pre>`;
+                            }
+                        }
+                        outputText += `</div>`;
+
+                        // Extract coordinates for map
+                        if (key === 'Latitude Bit Field') {
+                            lat = parseFloat(value.Description.split(':')[1]);
+                        }
+                        if (key === 'Longitude Bit Field') {
+                            lng = parseFloat(value.Description.split(':')[1]);
+                        }
+                    }
+                    
+                    output.innerHTML = outputText;
+
+                    // Show map if coordinates are available
+                    if (lat && lng) {
+                        await showLocation(lat, lng);
+                    } else {
+                        mapDiv.style.display = 'none';
+                        coordDiv.style.display = 'none';
+                    }
+                } else {
+                    output.innerHTML = `<div class="key-value" style="color: #dc3545;">Error: ${decodedMessage.error}</div>`;
+                    mapDiv.style.display = 'none';
+                    coordDiv.style.display = 'none';
+                }
+            } catch (error) {
+                output.innerHTML = `<div class="key-value" style="color: #dc3545;">Error decoding message: ${error.message}</div>`;
+                mapDiv.style.display = 'none';
+                coordDiv.style.display = 'none';
+            }
+        }
+
+        // Clean up map when page is unloaded
+        window.addEventListener('unload', () => {
+            if (map) {
+                map.remove();
+                map = null;
+                mapInitialized = false;
+            }
+        });
+    </script>
+</body>
+</html> 
