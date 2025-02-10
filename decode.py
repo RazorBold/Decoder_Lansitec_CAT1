@@ -69,7 +69,149 @@ def decode_hex_message(hex_message):
     if len(hex_message) >= 2:
         msg_type = hex_message[0]
         
-        if msg_type == '2':  # Heartbeat message
+        if msg_type == '1':  # Registration message
+            # Define field lengths for Type 1
+            field_lengths = [2,      # Type Bit Field
+                            8,      # State Bit Field
+                            2,      # Reserved
+                            4,      # Heartbeat Period
+                            4,      # BLE Position Report Interval
+                            2,      # BLE Receiving Duration
+                            4,      # GNSS Position Report Interval
+                            2,      # GNSS Receiving Duration
+                            4,      # Asset Beacon Report Interval
+                            2,      # Asset Beacon Receiving Duration
+                            4,      # Software Version
+                            16,     # IMSI
+                            4,      # Message ID
+                            8]      # Reserved
+            
+            # Split the message
+            current_pos = 0
+            for length in field_lengths:
+                if current_pos + length <= len(hex_message):
+                    parts.append(hex_message[current_pos:current_pos + length])
+                    current_pos += length
+            
+            result = {}
+            
+            # Decode Type Bit Field
+            if len(parts) >= 1:
+                type_field = parts[0]
+                result['Type Bit Field'] = {
+                    'Value': type_field,
+                    'Description': 'Registration message'
+                }
+            
+            # Decode State Bit Field
+            if len(parts) >= 2:
+                state_field = parts[1]
+                state_descriptions = {
+                    'BLE': (state_field[0] == 'F', 'BLE sign is "1" (enabled)'),
+                    'GNSS': (state_field[0] == 'F', 'GNSS sign is "1" (enabled)'),
+                    'Network Status Check': (state_field[0] == 'F', 'Network Status Check sign is "1" (enabled)'),
+                    'Power Switch': (state_field[0] == 'F', 'Power Switch sign is "1" (enabled)'),
+                    'Asset beacon sort enable': (state_field[1] == '3', 'Asset beacon sort enable is "1"'),
+                    'GNSS failure report send function': (state_field[1] == '3', 'GNSS failure report send function is "1"'),
+                    'Asset management enable': (state_field[2] == '8', 'Asset management enable is "1"'),
+                    'Position Report Mode': (state_field[4] == '0', 'Position Report Mode is "00"'),
+                    'Tamper Detection enable': (state_field[5] == '4', 'Tamper Detection enable is "1"')
+                }
+                
+                status_dict = {}
+                for key, (is_enabled, _) in state_descriptions.items():
+                    status_dict[key] = "Enabled" if is_enabled else "Disabled"
+                    
+                result['State Bit Field'] = {
+                    'Value': state_field,
+                    'Status': status_dict
+                }
+            
+            # Decode Heartbeat Period
+            if len(parts) >= 4:
+                hb_period = int(parts[3], 16)
+                result['Heartbeat Period Bit Field'] = {
+                    'Value': parts[3],
+                    'Description': f'Heartbeat period is {hb_period * 30 // 60} minutes ({hb_period} * 30s)'
+                }
+            
+            # Decode BLE Position Report Interval
+            if len(parts) >= 5:
+                ble_interval = int(parts[4], 16)
+                result['BLE Position Report Interval Bit Field'] = {
+                    'Value': parts[4],
+                    'Description': f'BLE Position Report Interval is {ble_interval * 5 // 60} minutes ({ble_interval} * 5s)'
+                }
+            
+            # Decode BLE Receiving Duration
+            if len(parts) >= 6:
+                ble_duration = int(parts[5], 16)
+                result['BLE Receiving Duration Bit Field'] = {
+                    'Value': parts[5],
+                    'Description': f'BLE Receiving Duration is {ble_duration}s ({ble_duration} * 1s)'
+                }
+            
+            # Decode GNSS Position Report Interval
+            if len(parts) >= 7:
+                gnss_interval = int(parts[6], 16)
+                result['GNSS Position Report Interval Bit Field'] = {
+                    'Value': parts[6],
+                    'Description': f'GNSS Position Report Interval is {gnss_interval * 5 // 60} minutes'
+                }
+            
+            # Decode GNSS Receiving Duration
+            if len(parts) >= 8:
+                gnss_duration = int(parts[7], 16)
+                result['GNSS Receiving Duration Bit Field'] = {
+                    'Value': parts[7],
+                    'Description': f'GNSS Receiving Duration is {gnss_duration * 5}s ({gnss_duration} * 5s)'
+                }
+            
+            # Decode Asset Beacon Report Interval
+            if len(parts) >= 9:
+                asset_interval = int(parts[8], 16)
+                result['Asset Beacon Report Interval Bit Field'] = {
+                    'Value': parts[8],
+                    'Description': f'Asset Beacon Report Interval is {asset_interval * 5 // 60} minutes ({asset_interval} * 5s)'
+                }
+            
+            # Decode Asset Beacon Receiving Duration
+            if len(parts) >= 10:
+                asset_duration = int(parts[9], 16)
+                result['Asset Beacon Receiving Duration Bit Field'] = {
+                    'Value': parts[9],
+                    'Description': f'Asset Beacon Receiving Duration is {asset_duration}s ({asset_duration} * 1s)'
+                }
+            
+            # Decode Software Version
+            if len(parts) >= 11:
+                sw_version = parts[10]
+                major = int(sw_version[:2], 16)
+                minor = int(sw_version[2:], 16)
+                result['Software Version Bit Field'] = {
+                    'Value': parts[10],
+                    'Description': f'Firmware version is {major}.{minor:02d} ver'
+                }
+            
+            # Decode IMSI
+            if len(parts) >= 12:
+                imsi = parts[11][:-1]  # Remove last character (F is reserved)
+                result['IMSI Bit Field'] = {
+                    'Value': parts[11],
+                    'Description': f'International Mobile Subscriber Identity (IMSI): {imsi}'
+                }
+            
+            # Decode Message ID
+            if len(parts) >= 13:
+                message_id = int(parts[12], 16)
+                result['Message ID Bit Field'] = {
+                    'Value': parts[12],
+                    'Description': f'Message ID: {message_id:04x}, sequence number of downlink messages'
+                }
+            
+            return result
+            
+        elif msg_type == '2':  # Heartbeat message
             # Define the field lengths for Type 2 message
             field_lengths = [2,  # Type Bit Field
                             8,  # State Bit Field
