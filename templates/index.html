@@ -200,6 +200,78 @@
         .leaflet-bottom {
             z-index: 3;
         }
+
+        .parameter-list {
+            margin: 20px 0;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+        }
+
+        .parameter-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            margin: 5px 0;
+            background: white;
+            border-radius: 5px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .parameter-item button {
+            padding: 5px 10px;
+            background: #dc3545;
+            margin-left: 10px;
+        }
+
+        .result-section {
+            display: flex;
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        #resultHex {
+            flex: 1;
+            padding: 15px;
+            font-family: 'Courier New', monospace;
+            font-size: 1.2em;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            background: #f8f9fa;
+            cursor: text;
+        }
+
+        select {
+            padding: 15px;
+            font-size: 1.2em;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            background: white;
+            flex: 1;
+        }
+
+        #messageId {
+            padding: 15px;
+            font-size: 1.2em;
+            font-family: 'Courier New', monospace;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        #queryResultHex {
+            flex: 1;
+            padding: 15px;
+            font-family: 'Courier New', monospace;
+            font-size: 1.2em;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            background: #f8f9fa;
+            cursor: text;
+        }
     </style>
 </head>
 <body>
@@ -212,6 +284,72 @@
         <div id="output"></div>
         <div class="coordinates-section" id="coordinates"></div>
         <div id="map"></div>
+        <h1>Downlink Tracker Configuration</h1>
+        <div class="input-section">
+            <select id="parameterSelect" onchange="updateValueInput()">
+                <option value="">Select Parameter</option>
+                <option value="01">01: HB Period</option>
+                <option value="02">02: BLE Position Report Interval</option>
+                <option value="03">03: GNSS Position Report Interval</option>
+                <option value="04">04: Asset Beacon Report Interval</option>
+                <option value="05">05: BLE Position Receiving Duration</option>
+                <option value="06">06: GNSS Position Receiving Duration</option>
+                <option value="07">07: Asset Beacon Receiving Duration</option>
+                <option value="0A">0A: Position Beacon UUID</option>
+                <option value="0B">0B: Asset Beacon UUID</option>
+                <option value="1C">1C: Temper Detection Enable</option>
+                <option value="20">20: Position Report Mode</option>
+                <option value="29">29: Asset Management Enable</option>
+                <option value="2A">2A: GNSS Failure Report Enable</option>
+                <option value="2B">2B: Asset Sort Enable</option>
+                <option value="2E">2E: Power Switch Enable</option>
+                <option value="2F">2F: Network Status Check</option>
+                <option value="30">30: GNSS Enable State</option>
+                <option value="31">31: BLE Enable</option>
+            </select>
+            <input type="text" id="valueInput" placeholder="Enter value">
+            <button onclick="addParameter()">Add Parameter</button>
+        </div>
+        <div id="parameterList" class="parameter-list"></div>
+        <div class="result-section">
+            <input type="text" id="resultHex" readonly>
+            <button onclick="copyResult()">Copy Result</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <h1>Query Tracker Configuration Message</h1>
+        <div class="input-section">
+            <select id="queryParameterSelect">
+                <option value="">Select Parameter</option>
+                <option value="00">00: Software Version</option>
+                <option value="01">01: HB Period</option>
+                <option value="02">02: BLE Position Report Interval</option>
+                <option value="03">03: GNSS Position Report Interval</option>
+                <option value="04">04: Asset Beacon Report Interval</option>
+                <option value="05">05: BLE Position Receiving Duration</option>
+                <option value="06">06: GNSS Position Receiving Duration</option>
+                <option value="07">07: Asset Beacon Receiving Duration</option>
+                <option value="0A">0A: Position Beacon UUID</option>
+                <option value="0B">0B: Asset Beacon UUID</option>
+                <option value="0E">0E: IMSI</option>
+                <option value="1C">1C: Tamper Detection Enable</option>
+                <option value="20">20: Position Report Mode</option>
+                <option value="29">29: Asset Management Enable</option>
+                <option value="2A">2A: GNSS Failure Report Enable</option>
+                <option value="2B">2B: Asset Beacon Sort Enable</option>
+                <option value="2E">2E: Power Switch Enable</option>
+                <option value="2F">2F: Network Status Check</option>
+                <option value="30">30: GNSS Enable State</option>
+                <option value="31">31: BLE Enable</option>
+            </select>
+            <button onclick="addQueryParameter()">Add Parameter</button>
+        </div>
+        <div id="queryParameterList" class="parameter-list"></div>
+        <div class="result-section">
+            <input type="text" id="queryResultHex" readonly>
+            <button onclick="copyQueryResult()">Copy Result</button>
+        </div>
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -219,6 +357,7 @@
         let map;
         let marker;
         let mapInitialized = false;
+        let currentMessageId = 1;
 
         function initMap() {
             if (mapInitialized) return;
@@ -385,6 +524,221 @@
                 mapInitialized = false;
             }
         });
+
+        const parameters = [];
+        const parameterRanges = {
+            '01': { min: '0000', max: 'FFFF', type: 'hex4' },
+            '02': { min: '0000', max: 'FFFF', type: 'hex4' },
+            '03': { min: '0000', max: 'FFFF', type: 'hex4' },
+            '04': { min: '0000', max: 'FFFF', type: 'hex4' },
+            '05': { min: '00', max: '0A', type: 'hex2' },
+            '06': { min: '00', max: 'FF', type: 'hex2' },
+            '07': { min: '00', max: 'FF', type: 'hex2' },
+            '0A': { type: 'uuid' },
+            '0B': { type: 'uuid' },
+            '1C': { type: 'enable' },
+            '20': { type: 'mode' },
+            '29': { type: 'enable' },
+            '2A': { type: 'enable' },
+            '2B': { type: 'enable' },
+            '2E': { type: 'enable' },
+            '2F': { type: 'enable' },
+            '30': { type: 'enable' },
+            '31': { type: 'enable' }
+        };
+
+        function updateValueInput() {
+            const select = document.getElementById('parameterSelect');
+            const valueInput = document.getElementById('valueInput');
+            const param = parameterRanges[select.value];
+
+            if (!param) {
+                valueInput.placeholder = 'Enter value';
+                return;
+            }
+
+            switch (param.type) {
+                case 'hex4':
+                    valueInput.placeholder = `Enter hex value (${param.min}-${param.max})`;
+                    break;
+                case 'hex2':
+                    valueInput.placeholder = `Enter hex value (${param.min}-${param.max})`;
+                    break;
+                case 'uuid':
+                    valueInput.placeholder = 'Enter 128-bit UUID (32 hex chars)';
+                    break;
+                case 'enable':
+                    valueInput.placeholder = 'Enter 00 (Disable) or 01 (Enable)';
+                    break;
+                case 'mode':
+                    valueInput.placeholder = '00 (Period), 01 (Autonomous), 02 (On-demand)';
+                    break;
+            }
+        }
+
+        function validateValue(parameter, value) {
+            const param = parameterRanges[parameter];
+            if (!param) return false;
+
+            const hexRegex = /^[0-9A-Fa-f]+$/;
+            if (!hexRegex.test(value)) return false;
+
+            switch (param.type) {
+                case 'hex4':
+                    return value.length === 4;
+                case 'hex2':
+                    return value.length === 2;
+                case 'uuid':
+                    return value.length === 32;
+                case 'enable':
+                    return value === '00' || value === '01';
+                case 'mode':
+                    return value === '00' || value === '01' || value === '02';
+                default:
+                    return false;
+            }
+        }
+
+        function addParameter() {
+            const select = document.getElementById('parameterSelect');
+            const valueInput = document.getElementById('valueInput');
+            const parameter = select.value;
+            const value = valueInput.value.toUpperCase();
+
+            if (!parameter) {
+                alert('Please select a parameter');
+                return;
+            }
+
+            if (!validateValue(parameter, value)) {
+                alert('Invalid value for selected parameter');
+                return;
+            }
+
+            parameters.push({ parameter, value });
+            updateParameterList();
+            updateResult();
+
+            // Reset inputs
+            select.value = '';
+            valueInput.value = '';
+            valueInput.placeholder = 'Enter value';
+        }
+
+        function removeParameter(index) {
+            parameters.splice(index, 1);
+            updateParameterList();
+            updateResult();
+        }
+
+        function updateParameterList() {
+            const list = document.getElementById('parameterList');
+            list.innerHTML = parameters.map((p, index) => `
+                <div class="parameter-item">
+                    <span>${p.parameter}: ${p.value}</span>
+                    <button onclick="removeParameter(${index})">Remove</button>
+                </div>
+            `).join('');
+        }
+
+        function updateResult() {
+            const resultHex = document.getElementById('resultHex');
+            if (parameters.length === 0) {
+                resultHex.value = '';
+                return;
+            }
+
+            let result = 'A0';
+            parameters.forEach(p => {
+                result += p.parameter + p.value;
+            });
+            resultHex.value = result;
+        }
+
+        function copyResult() {
+            const resultHex = document.getElementById('resultHex');
+            resultHex.select();
+            document.execCommand('copy');
+            alert('Copied to clipboard!');
+        }
+
+        const queryParameters = [];
+
+        function addQueryParameter() {
+            const select = document.getElementById('queryParameterSelect');
+            const parameter = select.value;
+
+            if (!parameter) {
+                alert('Please select a parameter');
+                return;
+            }
+
+            // Check if parameter is already added
+            if (queryParameters.includes(parameter)) {
+                alert('This parameter has already been added');
+                return;
+            }
+
+            queryParameters.push(parameter);
+            updateQueryParameterList();
+            updateQueryResult();
+
+            // Increment message ID for next use
+            currentMessageId++;
+
+            // Reset select
+            select.value = '';
+        }
+
+        function removeQueryParameter(index) {
+            queryParameters.splice(index, 1);
+            updateQueryParameterList();
+            updateQueryResult();
+        }
+
+        function updateQueryParameterList() {
+            const list = document.getElementById('queryParameterList');
+            list.innerHTML = queryParameters.map((p, index) => {
+                const option = document.querySelector(`#queryParameterSelect option[value="${p}"]`);
+                const text = option ? option.text : p;
+                return `
+                    <div class="parameter-item">
+                        <span>${text}</span>
+                        <button onclick="removeQueryParameter(${index})">Remove</button>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function updateQueryResult() {
+            const resultHex = document.getElementById('queryResultHex');
+            
+            if (queryParameters.length === 0) {
+                resultHex.value = '';
+                return;
+            }
+
+            // Start with B0
+            let result = 'B0';
+            
+            // Add all parameters
+            queryParameters.forEach(p => {
+                result += p;
+            });
+
+            // Add auto-generated message ID at the end (4 digits, zero-padded)
+            const messageIdHex = currentMessageId.toString(16).padStart(4, '0').toUpperCase();
+            result += messageIdHex;
+            
+            resultHex.value = result;
+        }
+
+        function copyQueryResult() {
+            const resultHex = document.getElementById('queryResultHex');
+            resultHex.select();
+            document.execCommand('copy');
+            alert('Copied to clipboard!');
+        }
     </script>
 </body>
 </html> 
