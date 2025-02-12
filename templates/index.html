@@ -272,83 +272,172 @@
             background: #f8f9fa;
             cursor: text;
         }
+
+        .main-container {
+            max-width: 1200px;
+            margin: 40px auto;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+        }
+
+        .decoder-section {
+            grid-column: 1 / -1;  /* Takes full width */
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .downlink-section {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .section-title {
+            color: #1e3c72;
+            font-size: 1.8em;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #1e3c72;
+        }
+
+        /* Responsive design update */
+        @media (max-width: 1024px) {
+            .main-container {
+                grid-template-columns: 1fr;
+                margin: 20px;
+                gap: 20px;
+            }
+        }
+
+        #imeiInput, #payloadInput {
+            flex: 1;
+            padding: 15px;
+            font-size: 1.2em;
+            font-family: 'Courier New', monospace;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+        }
+
+        .status-message {
+            margin-top: 15px;
+            padding: 10px;
+            border-radius: 5px;
+            display: none;
+        }
+
+        .status-success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+            display: block;
+        }
+
+        .status-error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+            display: block;
+        }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Decoder Lansitec Cat 1</h1>
-        <div class="input-section">
-            <input type="text" id="hexInput" placeholder="Enter hex message (e.g., 10F3000000000078...)">
-            <button onclick="decodeMessage()">Decode</button>
+    <div class="main-container">
+        <!-- Decoder Section -->
+        <div class="decoder-section">
+            <h1 class="section-title">Decoder Lansitec Cat 1</h1>
+            <div class="input-section">
+                <input type="text" id="hexInput" placeholder="Enter hex message (e.g., 10F3000000000078...)">
+                <button onclick="decodeMessage()">Decode</button>
+            </div>
+            <div id="output"></div>
+            <div class="coordinates-section" id="coordinates"></div>
+            <div id="map"></div>
         </div>
-        <div id="output"></div>
-        <div class="coordinates-section" id="coordinates"></div>
-        <div id="map"></div>
-        <h1>Downlink Tracker Configuration</h1>
-        <div class="input-section">
-            <select id="parameterSelect" onchange="updateValueInput()">
-                <option value="">Select Parameter</option>
-                <option value="01">01: HB Period</option>
-                <option value="02">02: BLE Position Report Interval</option>
-                <option value="03">03: GNSS Position Report Interval</option>
-                <option value="04">04: Asset Beacon Report Interval</option>
-                <option value="05">05: BLE Position Receiving Duration</option>
-                <option value="06">06: GNSS Position Receiving Duration</option>
-                <option value="07">07: Asset Beacon Receiving Duration</option>
-                <option value="0A">0A: Position Beacon UUID</option>
-                <option value="0B">0B: Asset Beacon UUID</option>
-                <option value="1C">1C: Temper Detection Enable</option>
-                <option value="20">20: Position Report Mode</option>
-                <option value="29">29: Asset Management Enable</option>
-                <option value="2A">2A: GNSS Failure Report Enable</option>
-                <option value="2B">2B: Asset Sort Enable</option>
-                <option value="2E">2E: Power Switch Enable</option>
-                <option value="2F">2F: Network Status Check</option>
-                <option value="30">30: GNSS Enable State</option>
-                <option value="31">31: BLE Enable</option>
-            </select>
-            <input type="text" id="valueInput" placeholder="Enter value">
-            <button onclick="addParameter()">Add Parameter</button>
-        </div>
-        <div id="parameterList" class="parameter-list"></div>
-        <div class="result-section">
-            <input type="text" id="resultHex" readonly>
-            <button onclick="copyResult()">Copy Result</button>
-        </div>
-    </div>
 
-    <div class="container">
-        <h1>Query Tracker Configuration Message</h1>
-        <div class="input-section">
-            <select id="queryParameterSelect">
-                <option value="">Select Parameter</option>
-                <option value="00">00: Software Version</option>
-                <option value="01">01: HB Period</option>
-                <option value="02">02: BLE Position Report Interval</option>
-                <option value="03">03: GNSS Position Report Interval</option>
-                <option value="04">04: Asset Beacon Report Interval</option>
-                <option value="05">05: BLE Position Receiving Duration</option>
-                <option value="06">06: GNSS Position Receiving Duration</option>
-                <option value="07">07: Asset Beacon Receiving Duration</option>
-                <option value="0A">0A: Position Beacon UUID</option>
-                <option value="0B">0B: Asset Beacon UUID</option>
-                <option value="0E">0E: IMSI</option>
-                <option value="1C">1C: Tamper Detection Enable</option>
-                <option value="20">20: Position Report Mode</option>
-                <option value="29">29: Asset Management Enable</option>
-                <option value="2A">2A: GNSS Failure Report Enable</option>
-                <option value="2B">2B: Asset Beacon Sort Enable</option>
-                <option value="2E">2E: Power Switch Enable</option>
-                <option value="2F">2F: Network Status Check</option>
-                <option value="30">30: GNSS Enable State</option>
-                <option value="31">31: BLE Enable</option>
-            </select>
-            <button onclick="addQueryParameter()">Add Parameter</button>
+        <!-- Downlink Configuration Section -->
+        <div class="downlink-section">
+            <h1 class="section-title">Downlink Tracker Configuration</h1>
+            <div class="input-section">
+                <select id="parameterSelect" onchange="updateValueInput()">
+                    <option value="">Select Parameter</option>
+                    <option value="01">01: HB Period</option>
+                    <option value="02">02: BLE Position Report Interval</option>
+                    <option value="03">03: GNSS Position Report Interval</option>
+                    <option value="04">04: Asset Beacon Report Interval</option>
+                    <option value="05">05: BLE Position Receiving Duration</option>
+                    <option value="06">06: GNSS Position Receiving Duration</option>
+                    <option value="07">07: Asset Beacon Receiving Duration</option>
+                    <option value="0A">0A: Position Beacon UUID</option>
+                    <option value="0B">0B: Asset Beacon UUID</option>
+                    <option value="1C">1C: Temper Detection Enable</option>
+                    <option value="20">20: Position Report Mode</option>
+                    <option value="29">29: Asset Management Enable</option>
+                    <option value="2A">2A: GNSS Failure Report Enable</option>
+                    <option value="2B">2B: Asset Sort Enable</option>
+                    <option value="2E">2E: Power Switch Enable</option>
+                    <option value="2F">2F: Network Status Check</option>
+                    <option value="30">30: GNSS Enable State</option>
+                    <option value="31">31: BLE Enable</option>
+                </select>
+                <input type="text" id="valueInput" placeholder="Enter value">
+                <button onclick="addParameter()">Add Parameter</button>
+            </div>
+            <div id="parameterList" class="parameter-list"></div>
+            <div class="result-section">
+                <input type="text" id="resultHex" readonly>
+                <button onclick="copyResult()">Copy Result</button>
+            </div>
         </div>
-        <div id="queryParameterList" class="parameter-list"></div>
-        <div class="result-section">
-            <input type="text" id="queryResultHex" readonly>
-            <button onclick="copyQueryResult()">Copy Result</button>
+
+        <!-- Query Configuration Section -->
+        <div class="downlink-section">
+            <h1 class="section-title">Query Tracker Configuration</h1>
+            <div class="input-section">
+                <select id="queryParameterSelect">
+                    <option value="">Select Parameter</option>
+                    <option value="00">00: Software Version</option>
+                    <option value="01">01: HB Period</option>
+                    <option value="02">02: BLE Position Report Interval</option>
+                    <option value="03">03: GNSS Position Report Interval</option>
+                    <option value="04">04: Asset Beacon Report Interval</option>
+                    <option value="05">05: BLE Position Receiving Duration</option>
+                    <option value="06">06: GNSS Position Receiving Duration</option>
+                    <option value="07">07: Asset Beacon Receiving Duration</option>
+                    <option value="0A">0A: Position Beacon UUID</option>
+                    <option value="0B">0B: Asset Beacon UUID</option>
+                    <option value="0E">0E: IMSI</option>
+                    <option value="1C">1C: Tamper Detection Enable</option>
+                    <option value="20">20: Position Report Mode</option>
+                    <option value="29">29: Asset Management Enable</option>
+                    <option value="2A">2A: GNSS Failure Report Enable</option>
+                    <option value="2B">2B: Asset Beacon Sort Enable</option>
+                    <option value="2E">2E: Power Switch Enable</option>
+                    <option value="2F">2F: Network Status Check</option>
+                    <option value="30">30: GNSS Enable State</option>
+                    <option value="31">31: BLE Enable</option>
+                </select>
+                <button onclick="addQueryParameter()">Add Parameter</button>
+            </div>
+            <div id="queryParameterList" class="parameter-list"></div>
+            <div class="result-section">
+                <input type="text" id="queryResultHex" readonly>
+                <button onclick="copyQueryResult()">Copy Result</button>
+            </div>
+        </div>
+
+        <!-- MQTT Publisher Section -->
+        <div class="downlink-section">
+            <h1 class="section-title">MQTT Publisher</h1>
+            <div class="input-section">
+                <input type="text" id="imeiInput" placeholder="Enter IMEI">
+                <input type="text" id="payloadInput" placeholder="Enter payload data">
+                <button onclick="publishMessage()">Publish</button>
+            </div>
+            <div id="publishStatus" class="status-message"></div>
         </div>
     </div>
 
@@ -738,6 +827,52 @@
             resultHex.select();
             document.execCommand('copy');
             alert('Copied to clipboard!');
+        }
+
+        async function publishMessage() {
+            const imeiInput = document.getElementById('imeiInput');
+            const payloadInput = document.getElementById('payloadInput');
+            const statusDiv = document.getElementById('publishStatus');
+
+            const imei = imeiInput.value.trim();
+            const payload = payloadInput.value.trim();
+
+            if (!imei || !payload) {
+                statusDiv.textContent = 'Please enter both IMEI and payload';
+                statusDiv.className = 'status-message status-error';
+                return;
+            }
+
+            try {
+                const response = await fetch('/publish', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ imei, payload })
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    statusDiv.textContent = 'Message published successfully!';
+                    statusDiv.className = 'status-message status-success';
+                    // Clear inputs on success
+                    imeiInput.value = '';
+                    payloadInput.value = '';
+                } else {
+                    statusDiv.textContent = `Error: ${result.error}`;
+                    statusDiv.className = 'status-message status-error';
+                }
+            } catch (error) {
+                statusDiv.textContent = `Error: ${error.message}`;
+                statusDiv.className = 'status-message status-error';
+            }
+
+            // Hide status message after 5 seconds
+            setTimeout(() => {
+                statusDiv.style.display = 'none';
+            }, 5000);
         }
     </script>
 </body>
